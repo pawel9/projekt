@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pl-PL">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #links {
+            background-color: royalblue;
+            padding: 20px;
+            margin: 0;
+            color: white;
+        }
+
+        #links a {
+            color: white
+        }
+
+        #div1 {
+            margin-right: 20px;
+        }
+
+        #a1 {
+            font-size: 100px;
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            color: silver;
+            text-align: center;
+
+        }
+
+        .form {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 50px;
+            font-size: 20px;
+            ;
+            position: relative;
+        }
+
+        #submit {
+            border-radius: 30px;
+            width: 150px;
+            height: 30px;
+            font-weight: bold;
+        }
+
+        .submit {
+            position: relative;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="links">
+        <a href="/">main</a>
+        <a href="register">register</a>
+        <a href="login">login</a>
+        <a href="admin">admin</a>
+    </div>
+
+    <div id="a1">
+        login page
+    </div>
+
+    <div class="form">
+
+        <div id="div1">
+            <p>login:</p>
+            <p>password:</p>
+        </div>
+        <div id="div2">
+            <form id="form" action="/handleLogin" method="GET">
+                <p><input type="text" name="log"></input></p>
+                <p><input type="text" name="pass"></input></p>
+                <input id="submit" type="submit" value="Submit" />
+            </form>
+        </div>
+    </div>
+    <div class="submit">
+    </div>
+</body>
+
+</html>
