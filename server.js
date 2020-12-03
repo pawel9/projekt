@@ -12,7 +12,8 @@ let users = [
 ]
 
 //funkcje na serwerze obsługujace konkretne adresy w przeglądarce
-var path = require("path")
+var path = require("path");
+const { checkServerIdentity } = require("tls");
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get("/", function (req, res) {
@@ -39,18 +40,20 @@ app.get("/handleRegister", function (req, res) {
         if (users[i].log == req.query.log) {
             res.send("taki login jest juz w bazie danych");
             return;
-        } else if (req.query.pass == "") {
-            res.send("Nie podano hasła");
-            //}else if(req.query.plec !== "K" || req.query.plec !== "M"){
-            //       res.send("Nie zaznaczono płci");
-        } else {
-            var newID = users.length + 1;
-            users.push({ id: newID, log: req.query.log, pass: req.query.pass, wiek: req.query.wiek, uczen: req.query.uczen, plec: req.query.plec });
-            res.send("Witaj " + req.query.log + ", jesteś zarejestrowany")
-            return;
         }
+    } 
+    if (req.query.pass == "") {
+        res.send("Nie podano hasła");
+        return;
+    }
+    if(req.query.plec == undefined){
+        res.send("Nie zaznaczono płci");
+        return;
     }
 
+    var newID = users.length + 1;
+    users.push({ id: newID, log: req.query.log, pass: req.query.pass, wiek: req.query.wiek, uczen: req.query.uczen, plec: req.query.plec });
+    res.send("Witaj " + req.query.log + ", jesteś zarejestrowany");
 })
 
 app.get("/login", function (req, res) {
@@ -68,22 +71,20 @@ app.get("/handleLogin", function (req, res) {
     res.send("Wprowadzono złe dane");
 })
 
-app.get("/sort", function (req, res) {
+app.post("/sort", function (req, res) {
     if (zalogowany == true) {
         var sorted = Array.from(users);
         var form = ``;
-        if (req.query.sort == "rosnaco") {
+        if (req.body.sort == "rosnaco") {
             sorted.sort(function (a, b) {
                 return parseFloat(a.wiek) - parseFloat(b.wiek);
             });
-            form = `<form onchange="submit()"><input type="radio" name="sort" value="rosnaco" checked>rosnąco<input type="radio" name="sort" value="malejaco">malejąco</form>`;
-        } else if (req.query.sort == "malejaco") {
+            form = `<form onchange="submit()" method="POST"><input type="radio" name="sort" value="rosnaco" checked>rosnąco<input type="radio" name="sort" value="malejaco">malejąco</form>`;
+        } else {
             sorted.sort(function (a, b) {
                 return parseFloat(b.wiek) - parseFloat(a.wiek);
             });
-            form = `<form onchange="submit()"><input type="radio" name="sort" value="rosnaco" checked>rosnąco<input type="radio" name="sort" value="malejaco" checked>malejąco</form>`;
-        } else {
-            form = `<form onchange="submit()"><input type="radio" name="sort" value="rosnaco" >rosnąco<input type="radio" name="sort" value="malejaco">malejąco</form>`;
+            form = `<form onchange="submit()" method="POST"><input type="radio" name="sort" value="rosnaco" checked>rosnąco<input type="radio" name="sort" value="malejaco" checked>malejąco</form>`;
         }
 
         var href = `<div style="width:100%;height:60px;"><br><a style="padding:20px;font-size:20px;color:white;" href="sort"> sort </a> <a style="padding:20px;font-size:20px;color:white;" href="gender">gender </a> <a style="padding:20px;font-size:20px;color:white;" href="show">show </a><br><br></div>`;
@@ -93,7 +94,12 @@ app.get("/sort", function (req, res) {
         for (var i = 0; i < sorted.length; i++) {
             id = sorted[i].id.toString();
             wiek = sorted[i].wiek.toString();
-            var tr = `<tr><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">id:` + id + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">user: ` + sorted[i].log + " - " + sorted[i].pass + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">uczen: ` + sorted[i].uczen + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">wiek: ` + wiek + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">plec: ` + sorted[i].plec + `</td</tr>`;
+            if(sorted[i].uczen == ""){
+                uczen = `<img src="/uncheck.png" width="20" height="20">`;
+            }else{
+                uczen = `<img src="/check.png" width="20" height="20">`;
+            }
+            var tr = `<tr><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">id:` + id + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">user: ` + sorted[i].log + " - " + sorted[i].pass + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">uczen: ` + uczen + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">wiek: ` + wiek + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">plec: ` + sorted[i].plec + `</td</tr>`;
             result += tr;
         }
         var table = `<table style="width:100%;">` + result + `</table>`;
@@ -102,6 +108,33 @@ app.get("/sort", function (req, res) {
         res.redirect("/admin");
     }
 })
+
+app.get("/sort", function (req,res){
+    var sorted = Array.from(users);
+    var href = `<div style="width:100%;height:60px;"><br><a style="padding:20px;font-size:20px;color:white;" href="sort"> sort </a> <a style="padding:20px;font-size:20px;color:white;" href="gender">gender </a> <a style="padding:20px;font-size:20px;color:white;" href="show">show </a><br><br></div>`;
+    var form = `<form onchange="submit()" method="POST"><input type="radio" name="sort" value="rosnaco" >rosnąco<input type="radio" name="sort" value="malejaco">malejąco</form>`;
+    var result = "";
+    var id = "";
+    var wiek = "";
+    for (var i = 0; i < sorted.length; i++) {
+        id = sorted[i].id.toString();
+        wiek = sorted[i].wiek.toString();
+        if(sorted[i].uczen == ""){
+            uczen = `<img src="/uncheck.png" width="20" height="20">`;
+        }else{
+            uczen = `<img src="/check.png" width="20" height="20">`;
+        }
+        var tr = `<tr><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">id:` + id + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">user: ` + sorted[i].log + " - " + sorted[i].pass + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">uczen: ` + uczen + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">wiek: ` + wiek + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">plec: ` + sorted[i].plec + `</td</tr>`;
+        result += tr;
+    }
+    var table = `<table style="width:100%;">` + result + `</table>`;
+    if (zalogowany == true) {
+    res.send(`<div style="width:100%;height:100%;background-color:#282828;font-size:20px;color:white;">` + href + form + table + `</div>`);
+    } else {
+        res.redirect("/admin");
+    }
+})
+
 
 app.get("/show", function (req, res) {
     if (zalogowany == true) {
@@ -112,7 +145,12 @@ app.get("/show", function (req, res) {
         for (var i = 0; i < users.length; i++) {
             id = users[i].id.toString();
             wiek = users[i].wiek.toString();
-            var tr = `<tr><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">id:` + id + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">user: ` + users[i].log + " - " + users[i].pass + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">uczen: ` + users[i].uczen + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">wiek: ` + wiek + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">plec: ` + users[i].plec + `</td</tr>`;
+            if(users[i].uczen == ""){
+                uczen = `<img src="/uncheck.png" width="20" height="20">`;
+            }else{
+                uczen = `<img src="/check.png" width="20" height="20">`;
+            }
+            var tr = `<tr><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">id:` + id + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">user: ` + users[i].log + " - " + users[i].pass + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">uczen: ` + uczen + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">wiek: ` + wiek + `</td><td style="border:1px solid yellow;padding:8px;color:white;font-size:20px;">plec: ` + users[i].plec + `</td</tr>`;
             result += tr;
         }
         var table = `<table style="width:100%;">` + result + `</table>`;
